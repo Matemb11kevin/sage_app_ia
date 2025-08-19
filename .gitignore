@@ -1,0 +1,29 @@
+# --- global ---
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.bak
+*.swp
+.vscode/
+.idea/
+
+# --- backend (Python) ---
+backend/.env
+backend/venv/
+backend/__pycache__/
+backend/.pytest_cache/
+backend/.coverage
+backend/coverage/
+backend/dist/
+backend/build/
+backend/uploaded_excels/
+backend/**/*.py[cod]
+
+# --- frontend (React) ---
+frontend/node_modules/
+frontend/build/
+frontend/.env
+frontend/.env.local
+frontend/.env.development
+frontend/.env.production
