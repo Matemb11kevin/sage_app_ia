@@ -6,14 +6,17 @@
 - Validation colonnes requises / valeurs autorisées
 - Prévisualisation normalisée (quelques lignes)
 - (+) Déduplication par hash (si colonne file_hash disponible côté DB)
+
+⚠️ Important pour le déploiement (Render free) :
+- pas d'import global de `pandas`. On fait un import *local* dans _read_excel(),
+  pour éviter de charger pandas au démarrage de l'API.
 """
 
 from __future__ import annotations
 from dataclasses import dataclass, asdict
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 import os
 import hashlib
-import pandas as pd
 
 from app.services.specs import (
     FileType,
@@ -130,10 +133,14 @@ def preview_file(
 
 
 # ---------- Helpers lecture/validation ----------
-def _read_excel(path: str) -> Optional[pd.DataFrame]:
+def _read_excel(path: str) -> Optional[Any]:
+    """
+    Lecture Excel avec import local de pandas pour éviter de charger la lib au démarrage.
+    """
     if not os.path.exists(path):
         return None
     try:
+        import pandas as pd  # ✅ import local, pas au top du module
         df = pd.read_excel(path, engine="openpyxl")
         # Retire colonnes totalement vides
         df = df.loc[:, ~df.columns.astype(str).str.match(r"^Unnamed")]

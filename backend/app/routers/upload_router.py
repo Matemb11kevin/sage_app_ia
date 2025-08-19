@@ -10,9 +10,6 @@ from app.database.connection import get_db
 from app.security import get_current_user  # role_required n'est plus utilisé pour DELETE
 from app.models.excel_model import ExcelFile, DonneeExcel
 from app.schemas.excel_file import ExcelFileResponse
-from app.services.ingest_service import preview_file
-from app.services.load_service import load_from_path  # <-- utilisé sur /load-excel/{id}
-from app.services.ingest_service import compute_sha256  # <-- [HASH] on l'importe ici
 
 router = APIRouter(tags=["Upload fichiers Excel"])
 
@@ -36,6 +33,13 @@ async def upload_excel_files(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    """
+    Upload de fichiers .xlsx + enregistrement en BDD.
+    NB: import local de compute_sha256 pour éviter les imports lourds au démarrage.
+    """
+    # ✅ lazy import (évite d'importer pandas au boot)
+    from app.services.ingest_service import compute_sha256
+
     if not files:
         raise HTTPException(status_code=400, detail="Aucun fichier reçu.")
 
@@ -127,6 +131,13 @@ def validate_excel_file(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    """
+    Validation avec prévisualisation normalisée.
+    NB: import local de preview_file pour éviter l'import de pandas au boot.
+    """
+    # ✅ lazy import
+    from app.services.ingest_service import preview_file
+
     role = _role_value(current_user).lower()
     if role != "comptable":
         raise HTTPException(status_code=403, detail="Validation réservée au rôle Comptable")
@@ -139,11 +150,13 @@ def validate_excel_file(
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="Fichier physique manquant sur le serveur")
 
+    # On passe db pour permettre la dédup côté preview (optionnel)
     report = preview_file(
         path,
         declared_type=fichier.type_fichier,
         mois=fichier.mois,
         annee=fichier.annee,
+        db=db,
     )
     return report.dict()
 
@@ -154,6 +167,13 @@ def load_excel_file(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    """
+    ETL vers le warehouse.
+    NB: import local de load_from_path pour éviter imports inutiles au boot.
+    """
+    # ✅ lazy import
+    from app.services.load_service import load_from_path
+
     role = _role_value(current_user).lower()
     if role != "comptable":
         raise HTTPException(status_code=403, detail="Chargement réservé au rôle Comptable")
